@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vulnera.NET – SQLi Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .sidebar {
+      height: 100vh;
+      background: linear-gradient(to bottom, #007bff, #28a745);
+      color: white;
+      padding-top: 40px;
+      position: fixed;
+      width: 250px;
+    }
+    .sidebar h2 {
+      font-size: 1.6rem;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+    .sidebar .nav-link {
+      color: white;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+    }
+    .content {
+      margin-left: 270px;
+      padding: 40px;
+    }
+    .form-section {
+      display: none;
+    }
+    .card {
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      border: none;
+      border-radius: 15px;
+    }
+    input, button {
+      border-radius: 10px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar d-flex flex-column align-items-center">
+    <h2>💥 Vulnera.NET</h2>
+    <a href="#" class="nav-link" onclick="showView('login')">🔐 Login</a>
+    <a href="#" class="nav-link" onclick="showView('register')">📝 Register</a>
+    <a href="#" class="nav-link" onclick="showView('search')">🔎 Search</a>
+    <a href="#" class="nav-link" onclick="showView('brute')">🚨 Brute Force</a>
+    <a href="#" class="nav-link" onclick="showView('stats')">📊 Server Load</a>
+  </div>
+
+  <div class="content">
+    <!-- LOGIN -->
+    <div id="login" class="form-section">
+      <div class="card p-5">
+        <h3 class="mb-4">🔐 Login</h3>
+        <input type="text" id="loginUsername" class="form-control mb-3" placeholder="Username">
+        <input type="password" id="loginPassword" class="form-control mb-3" placeholder="Password">
+        <button class="btn btn-primary w-100" onclick="login()">Login</button>
+        <div class="mt-3" id="loginResult"></div>
+      </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register" class="form-section">
+      <div class="card p-5">
+        <h3 class="mb-4">📝 Register</h3>
+        <input type="text" id="registerUsername" class="form-control mb-3" placeholder="Username">
+        <input type="password" id="registerPassword" class="form-control mb-3" placeholder="Password">
+        <input type="email" id="registerEmail" class="form-control mb-3" placeholder="Email">
+        <button class="btn btn-success w-100" onclick="register()">Register</button>
+        <div class="mt-3" id="registerResult"></div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div id="search" class="form-section">
+      <div class="card p-5">
+        <h3 class="mb-4">🔎 Search Users</h3>
+        <input type="text" id="searchQuery" class="form-control mb-3" placeholder="Search by username">
+        <button class="btn btn-info w-100 text-white" onclick="search()">Search</button>
+        <div class="mt-4" id="searchResult"></div>
+      </div>
+    </div>
+
+    <!-- Attack -->
+    <div id="brute" class="form-section">
+        <div class="card p-5">
+          <h3 class="mb-4">🚨 Brute Force Attack Simulation</h3>
+          <input type="text" id="bruteUsername" class="form-control mb-3" placeholder="Target Username (e.g. admin)">
+          <button class="btn btn-danger w-100" onclick="startBrute()">Start Attack</button>
+          <div class="mt-4" id="bruteStatus"></div>
+        </div>
+        <div class="mt-3">
+            <p id="bruteStats" class="text-muted">Status: <span id="bruteTryCount">0</span> tries in <span id="bruteTime">0</span>s</p>
+            <div class="progress">
+              <div id="bruteProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" style="width: 0%"></div>
+            </div>
+          </div>          
+      </div>
+    
+      <!-- STATS -->
+      <div id="stats" class="form-section">
+        <div class="card p-5">
+          <h3 class="mb-4">📊 Server Stats</h3>
+          <p><b>CPU Usage:</b> <span id="cpuUsage">--</span>%</p>
+          <p><b>Available RAM:</b> <span id="ramAvailable">--</span> MB</p>
+          
+          <canvas id="cpuChart" height="100"></canvas>
+          <canvas id="ramChart" height="100" class="mt-4"></canvas>
+        </div>
+      </div>
+  </div>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const API_URL = "https://localhost:7273/api/User";
+
+    function showView(viewId) {
+      document.querySelectorAll('.form-section').forEach(el => el.style.display = 'none');
+      document.getElementById(viewId).style.display = 'block';
+    }
+
+    async function login() {
+      const username = document.getElementById("loginUsername").value;
+      const password = document.getElementById("loginPassword").value;
+      const res = await fetch(`${API_URL}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`, { method: "POST" });
+      const text = await res.text();
+      document.getElementById("loginResult").innerText = text;
+    }
+
+    async function register() {
+      const username = document.getElementById("registerUsername").value;
+      const password = document.getElementById("registerPassword").value;
+      const email = document.getElementById("registerEmail").value;
+      const res = await fetch(`${API_URL}/register?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}`, { method: "POST" });
+      const text = await res.text();
+      document.getElementById("registerResult").innerText = text;
+    }
+
+    async function search() {
+      const query = document.getElementById("searchQuery").value;
+      const res = await fetch(`${API_URL}/search?query=${encodeURIComponent(query)}`);
+      const json = await res.json();
+      const html = json.map(u => `<li class="list-group-item">${u.username} (${u.email})</li>`).join('');
+      document.getElementById("searchResult").innerHTML = `<ul class="list-group">${html}</ul>`;
+    }
+
+    // Açılışta login ekranını göster
+    showView('login');
+
+    const passwordList = [
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty',
+      '123', 'admin', 'admin123', '123456', 'pass', 'password', 'root', 'toor', 'qwerty'
+    ];
+    let bruteRunning = false;
+    
+    async function startBrute() {
+        let bruteRunning = false;
+        let bruteStartTime = 0;
+
+        if (bruteRunning) return;
+    
+        bruteRunning = true;
+        bruteStartTime = Date.now();
+        let tries = 0;
+    
+        const username = document.getElementById("bruteUsername").value;
+        let found = false;
+    
+        for (let i = 0; i < passwordList.length; i++) {
+        const pass = passwordList[i];
+        tries++;
+    
+        // Progress bar güncelle
+        const progress = ((i + 1) / passwordList.length) * 100;
+        document.getElementById("bruteProgressBar").style.width = `${progress}%`;
+    
+        const res = await fetch(`${API_URL}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(pass)}`, {
+            method: "POST"
+        });
+    
+        const text = await res.text();
+    
+        document.getElementById("bruteStatus").innerHTML = `🔁 Trying <b>${pass}</b>... (${i + 1}/${passwordList.length})`;
+        document.getElementById("bruteTryCount").innerText = tries;
+        document.getElementById("bruteTime").innerText = Math.floor((Date.now() - bruteStartTime) / 1000);
+    
+        if (text.toLowerCase().includes("başarılı") || text.toLowerCase().includes("successful")) {
+            document.getElementById("bruteStatus").innerHTML = `<span class="text-success">✅ Password found: <b>${pass}</b> in ${i + 1} tries</span>`;
+            document.getElementById("bruteProgressBar").classList.replace("bg-danger", "bg-success");
+            found = true;
+            break;
+        }
+    
+        await new Promise(r => setTimeout(r, 300));
+        }
+    
+        if (!found) {
+        document.getElementById("bruteStatus").innerHTML = `<span class="text-danger">❌ Password not found in list</span>`;
+        }
+    
+        bruteRunning = false;
+              
+    }
+
+
+    let cpuChart, ramChart;
+    let cpuData = [], ramData = [], labels = [];
+
+    function setupCharts() {
+    const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+    const ramCtx = document.getElementById('ramChart').getContext('2d');
+
+    cpuChart = new Chart(cpuCtx, {
+        type: 'line',
+        data: {
+        labels: labels,
+        datasets: [{
+            label: 'CPU Usage (%)',
+            data: cpuData,
+            backgroundColor: 'rgba(0, 123, 255, 0.2)',
+            borderColor: 'rgba(0, 123, 255, 1)',
+            borderWidth: 2,
+            tension: 0.3
+        }]
+        },
+        options: {
+        scales: { y: { min: 0, max: 100 } }
+        }
+    });
+
+    ramChart = new Chart(ramCtx, {
+        type: 'line',
+        data: {
+        labels: labels,
+        datasets: [{
+            label: 'RAM Usage (MB)',
+            data: ramData,
+            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+            borderColor: 'rgba(40, 167, 69, 1)',
+            borderWidth: 2,
+            tension: 0.3
+        }]
+        },
+        options: {
+        scales: { y: { beginAtZero: true } }
+        }
+    });
+    }
+
+    async function loadStats() {
+    const res = await fetch(`${API_URL.replace('/User', '')}/systemstats/stats`);
+    const json = await res.json();
+
+    document.getElementById("cpuUsage").innerText = json.cpu;
+    document.getElementById("ramAvailable").innerText = json.memory;
+
+    const now = new Date().toLocaleTimeString();
+
+    if (labels.length > 10) {
+        labels.shift(); cpuData.shift(); ramData.shift();
+    }
+
+    labels.push(now);
+    cpuData.push(json.cpu);
+    ramData.push(json.memory);
+
+    cpuChart.update();
+    ramChart.update();
+    }
+
+    setupCharts();
+    setInterval(() => {
+    if (document.getElementById("stats").style.display === 'block') {
+        loadStats();
+    }
+    }, 1000);
+</script>
+
+</body>
+</html>
