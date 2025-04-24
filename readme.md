@@ -1,7 +1,7 @@
 # 💥 Vulnera.NET – Security Playground
 
 Vulnera.NET is a deliberately insecure ASP.NET 6.0 Web API + Bootstrap-based playground built to demonstrate:
-
+- ✅ View YouTube DEMO: https://youtu.be/vsUeiiuE0kg
 - ✅ SQL Injection vulnerabilities
 - ✅ Brute Force attack simulation
 - ✅ Real-time CPU/RAM usage tracking (Server Stress)
